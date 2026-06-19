@@ -18,3 +18,4 @@ langchain
 langchain-openai
 asyncpg
 httpx
+ipykernel

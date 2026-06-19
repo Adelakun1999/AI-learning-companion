@@ -4,17 +4,17 @@ import operator
 
 class AgentState(TypedDict):
     #student context
-    user_id : str
-    session_id : str 
-    topic : str 
-    learning_level : str 
+    user_id : str        #who is studying
+    session_id : str     # which session
+    topic : str          # what topic
+    learning_level : str #beginner/intermediate/ advanced
 
     #converations
 
     messages : Annotated[list[dict], operator.add]
-    current_input : str 
-    next_agent : str 
-    response : str 
-    quiz_data : Optional[dict]
+    current_input : str # what the student just typed
+    next_agent : str    #where to go next
+    response : str      # what to send back to the student
+    quiz_data : Optional[dict] # Active quiz state
     current_session_score : float
     session_summary : Optional[str]
