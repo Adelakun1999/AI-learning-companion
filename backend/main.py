@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.db.models import User
 from backend.api.auth import router as auth_router
 from backend.api.user import router as user_router
+from backend.api.sessions import router as session_router
 from backend.core.logger import get_logger
 from backend.core.config import get_settings
 
@@ -52,6 +53,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(user_router)
+app.include_router(session_router)
 
 @app.get("/")
 def home():

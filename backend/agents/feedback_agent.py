@@ -5,7 +5,7 @@ from backend.core.config import get_settings
 from backend.core.logger import get_logger
 
 settings = get_settings()
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 llm = ChatOpenAI(

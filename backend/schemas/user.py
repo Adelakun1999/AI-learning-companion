@@ -28,3 +28,14 @@ class TokenResponse(BaseModel):
     access_token : str 
     token_type : str = "bearer"
     user : UserResponse
+
+class TopicProgressResponse(BaseModel):
+    """Progress for a single topic"""
+    topic: str
+    mastery_score: float
+    times_studied: int
+    times_quizzed: int
+    score_history: list[float]
+    last_studied_at: datetime
+
+    model_config = {"from_attributes": True}
