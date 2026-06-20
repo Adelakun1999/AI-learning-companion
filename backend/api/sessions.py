@@ -28,7 +28,7 @@ async def create_session(
     """Start a new study session on a topic."""
     session = StudySession(user_id = user.id , topic = body.topic)
     db.add(session)
-    await db.flush
+    await db.flush()
     return session
 
 @router.get("/sessions", response_model=List[SessionSummary], status_code=status.HTTP_200_OK)
