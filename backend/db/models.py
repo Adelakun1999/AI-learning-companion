@@ -44,13 +44,20 @@ class StudySession(Base):
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # Persists the active quiz's state (questions, current index, scores)
+    # BETWEEN chat turns. Without this, the API has no memory of an
+    # in-progress quiz once the request ends — each new message would
+    # look like a fresh start. Nullable because most of the time there's
+    # no active quiz at all.
+    quiz_state: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
     user: Mapped["User"] = relationship("User", back_populates="sessions")
     messages: Mapped[List["Message"]] = relationship(
         "Message", back_populates="session", order_by="Message.created_at"
     )
 
 
-#  Message 
+# Message 
 class Message(Base):
     __tablename__ = "messages"
 
@@ -64,7 +71,7 @@ class Message(Base):
     session: Mapped["StudySession"] = relationship("StudySession", back_populates="messages")
 
 
-# TopicProgress 
+# TopicProgress
 class TopicProgress(Base):
     __tablename__ = "topic_progress"
 

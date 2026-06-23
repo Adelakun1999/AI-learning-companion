@@ -1,10 +1,10 @@
 from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
 from backend.agents.state import AgentState
-from backend.core.config import get_settings
+from backend.core.config import settings
 from backend.core.logger import get_logger
 
-settings = get_settings()
+
 logger = get_logger(__name__)
 
 

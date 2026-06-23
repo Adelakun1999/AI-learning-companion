@@ -1,10 +1,10 @@
 from passlib.context import CryptContext
-from backend.core.config import get_settings
+from backend.core.config import settings
 from datetime import datetime , timedelta
 from jose import JWTError , jwt
 from typing import Optional
 
-settings = get_settings()
+
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

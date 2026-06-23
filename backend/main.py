@@ -1,47 +1,35 @@
+# backend/main.py
+
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+from backend.api import auth, sessions, user
 from fastapi.middleware.cors import CORSMiddleware
-from backend.db.models import User
-from backend.api.auth import router as auth_router
-from backend.api.user import router as user_router
-from backend.api.sessions import router as session_router
+
+from backend.core.config import settings
 from backend.core.logger import get_logger
-from backend.core.config import get_settings
-
-settings = get_settings()
 
 
-
-import backend.db.models
 
 logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # STARTUP: create DB tables if they don't exist
-    # In production you'd use Alembic migrations instead.
-    from backend.db.models import Base
     from backend.db.database import engine
-    logger.info("Starting up — creating DB tables...")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("DB tables ready")
+
+    logger.info("Starting up")
     yield
-    # SHUTDOWN: close the connection pool cleanly
-    logger.info("Shutting down — disposing DB engine")
+    logger.info("Shutting down")
     await engine.dispose()
 
 
-
-
 app = FastAPI(
-    title = settings.APP_NAME,
-    version = "1.0.0",
+    title=settings.APP_NAME,
+    version="1.0.0",
     description="Multi-agent AI learning companion powered by LangGraph",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,10 +39,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router)
-app.include_router(user_router)
-app.include_router(session_router)
+app.include_router(auth.router)
+app.include_router(sessions.router)
+app.include_router(user.router)
 
-@app.get("/")
-def home():
-    return {"message": "Hello, Learning Companion!"}
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "app": settings.APP_NAME}

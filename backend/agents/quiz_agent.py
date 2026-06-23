@@ -1,34 +1,44 @@
 import json
-import re 
+import re
+
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from backend.agents.state import AgentState
-from backend.core.config import get_settings
+from backend.core.config import settings
 from backend.core.logger import get_logger
 
-settings = get_settings()
 logger = get_logger(__name__)
 
 llm = ChatOpenAI(
-    model = "gpt-4o",
-    temperature=0.3,
-    api_key= settings.OPENAI_API_KEY
+    model="gpt-4o",
+    temperature=0.3,   # Lower temp = more consistent, structured output
+    api_key=settings.OPENAI_API_KEY,
 )
 
-async def quiz_agent(state : AgentState)-> dict:
+
+async def quiz_agent(state: AgentState) -> dict:
     """
-    LangGraph node - either generates a quiz or evaluates an answer
+    LangGraph node — either generates a quiz or evaluates an answer.
     """
-    if state.get("quiz_data") and state['quiz_data'].get("awaiting_answer"):
+    #  Decide the mode 
+    # If there's already an active quiz in state, the student is answering.
+    # Otherwise, generate a new quiz.
+    if state.get("quiz_data") and state["quiz_data"].get("awaiting_answer"):
         return await _evaluate_answer(state)
     else:
         return await _generate_quiz(state)
-    
 
-async def _generate_quiz(state:AgentState)->dict:
-    logger.info(f"Generating quiz | topic = {state['topic']}")
+
+async def _generate_quiz(state: AgentState) -> dict:
+    """
+    Generate 3 quiz questions for the current topic.
+    We ask the LLM to respond in JSON so we can parse it reliably.
+    """
+    logger.info(f"Generating quiz | topic={state['topic']}")
+
     level = state.get("learning_level", "beginner")
+
     system_prompt = f"""You are a quiz generator. Create exactly 3 quiz questions about: {state['topic']}
 Level: {level}
 
@@ -62,27 +72,30 @@ For beginners: test basic recall and understanding.
 For intermediate: test application and reasoning.
 For advanced: test analysis, edge cases, and trade-offs.
 """
-    
-    response = llm.ainvoke([SystemMessage(content=system_prompt)])
-    #parse the json response 
+
+    response = await llm.ainvoke([SystemMessage(content=system_prompt)])
+
+    #  Parse the JSON response 
+    # Strip any accidental markdown code fences (```json ... ```)
     raw = response.content.strip()
     raw = re.sub(r"```json|```", "", raw).strip()
 
     try:
         quiz_data = json.loads(raw)
     except json.JSONDecodeError:
-        logger.error(f"Failed to parse quiz JSON : {raw}")
-
+        logger.error(f"Failed to parse quiz JSON: {raw}")
+        # Graceful fallback — return a simple error message
         return {
-            "response" : "I had trouble generating a quiz . Please try again",
-            "next_agent" : "progress_tracker"
+            "response": "I had trouble generating a quiz. Please try again.",
+            "next_agent": "progress_tracker",
         }
-    
-    #mark that we're waiting for the student's answer tO Q1
-    quiz_data["current_question_index"] = 0 
+
+    # Mark that we're waiting for the student's answer to Q1
+    quiz_data["current_question_index"] = 0
     quiz_data["awaiting_answer"] = True
     quiz_data["scores"] = []
 
+    # Format the first question for display
     first_q = quiz_data["questions"][0]
     reply = (
         f"## Quiz Time! 🎯\n\n"
@@ -94,22 +107,32 @@ For advanced: test analysis, edge cases, and trade-offs.
     logger.info("Quiz generated successfully")
 
     return {
-        "messages" : [
-            {"role" : "user", "content" : state["current_input"]},
-            {"role" : "assistant" , "content" : reply, "agent" : "quiz_agent"},
+        "messages": [
+            {"role": "user", "content": state["current_input"]},
+            {"role": "assistant", "content": reply, "agent": "quiz_agent"},
         ],
-        "response" : reply,
-        "quiz_data" : quiz_data,
-        "next_agent" : "progress_tracker"
+        "response": reply,
+        "quiz_data": quiz_data,
+        "next_agent": "progress_tracker",
     }
 
-async def _evaluate_answer(state:AgentState)-> dict:
+
+async def _evaluate_answer(state: AgentState) -> dict:
     """
     Evaluate the student's answer to the current quiz question.
     Score it 0–1 and move to the next question or finish the quiz.
     """
-    quiz_data = state['quiz_data']
-    questions = quiz_data['questions']
+    # IMPORTANT: copy.deepcopy here, not a plain reference.
+    # state["quiz_data"] is the SAME object the API layer holds as
+    # session.quiz_state. If we mutate it directly, we mutate that
+    # object too — which can confuse SQLAlchemy's change-tracking
+    # when the API tries to save "the new value" back to the DB
+    # (it may look identical-by-reference to "the old value").
+    # Working on a fresh copy keeps this node's output cleanly
+    # independent of whatever object the caller passed in.
+    import copy
+    quiz_data = copy.deepcopy(state["quiz_data"])
+    questions = quiz_data["questions"]
     idx = quiz_data["current_question_index"]
     current_q = questions[idx]
 
@@ -201,9 +224,3 @@ Always be encouraging regardless of score. Acknowledge what the student got righ
         "current_session_score": quiz_data.get("final_score", state.get("current_session_score", 0.0)),
         "next_agent": "progress_tracker",
     }
-
-
-
-
-
-

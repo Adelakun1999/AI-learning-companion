@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.agents.state import AgentState
-from backend.db.models import Message , TopicProgress, StudySession
+from backend.db.models import Message, TopicProgress, StudySession
 from backend.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -27,11 +27,15 @@ def make_progress_tracker(db: AsyncSession):
         """
         logger.info(f"Progress tracker running | session={state['session_id']}")
 
-        #  Save new messages to DB 
+        # Save new messages to DB 
+        # state["messages"] contains the full history (thanks to operator.add).
+        # We only want to save messages added in THIS turn.
+        # The last 2 messages are always the new ones (user + assistant).
         new_messages = state.get("messages", [])[-2:]
 
         for msg_data in new_messages:
             # Check if this exact message already exists to avoid duplicates
+            # (progress_tracker could theoretically be called multiple times)
             new_msg = Message(
                 session_id=state["session_id"],
                 role=msg_data["role"],
@@ -55,9 +59,21 @@ def make_progress_tracker(db: AsyncSession):
             progress = result.scalar_one_or_none()
 
             if not progress:
+                # IMPORTANT: explicitly set starting values here, even
+                # though the DB column has default=0/0.0. Column
+                # defaults are applied at INSERT time by the database —
+                # they do NOT populate the in-memory Python attribute
+                # immediately. Since we increment these same attributes
+                # a few lines below (progress.times_quizzed += 1) BEFORE
+                # any flush/commit happens, relying on the DB default
+                # would leave them as None in Python and crash on +=.
                 progress = TopicProgress(
                     user_id=state["user_id"],
                     topic=state["topic"],
+                    mastery_score=0.0,
+                    times_studied=0,
+                    times_quizzed=0,
+                    score_history=[],
                 )
                 db.add(progress)
 
@@ -80,21 +96,22 @@ def make_progress_tracker(db: AsyncSession):
             )
 
         # Update times_studied on the topic 
-        # Increment once per session (check if not already done)
-        result = await db.execute(
-            select(TopicProgress).where(
-                TopicProgress.user_id == state["user_id"],
-                TopicProgress.topic == state["topic"],
+        if "progress" not in locals() or progress is None:
+            result = await db.execute(
+                select(TopicProgress).where(
+                    TopicProgress.user_id == state["user_id"],
+                    TopicProgress.topic == state["topic"],
+                )
             )
-        )
-        progress = result.scalar_one_or_none()
+            progress = result.scalar_one_or_none()
+
         if progress:
             # We'll rely on message count as a proxy — first message = first study
             if len(state.get("messages", [])) <= 2:
                 progress.times_studied += 1
 
         await db.flush()  # Send SQL to DB but don't commit yet
-                        
+                          # The FastAPI get_db() dependency commits at request end
 
         logger.info("Progress tracker: DB updated")
 
