@@ -1,11 +1,3 @@
-// src/components/SessionCard.tsx
-//
-// A small, reusable card that shows one session's summary info.
-// Used in a list on the dashboard. Clicking it navigates to the
-// chat page for that session.
-//
-// This is a "presentational" component — it receives data via props
-// and has no idea where that data came from (API, mock, etc).
 
 import Link from "next/link";
 import type { SessionSummary } from "@/lib/types";
@@ -15,8 +7,6 @@ interface SessionCardProps {
 }
 
 export default function SessionCard({ session }: SessionCardProps) {
-  // Format the ISO date string into something human-readable.
-  // toLocaleDateString() uses the browser's locale automatically.
   const startedDate = new Date(session.started_at).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -29,20 +19,19 @@ export default function SessionCard({ session }: SessionCardProps) {
   return (
     <Link
       href={`/session/${session.id}`}
-      className="block bg-white border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all"
+      className="block bg-surface border border-border rounded-xl p-4 hover:border-border-hover hover:bg-surface-raised transition-colors"
     >
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-medium text-slate-900">{session.topic}</h3>
-          <p className="text-sm text-slate-500 mt-0.5">{startedDate}</p>
+          <h3 className="font-medium text-text">{session.topic}</h3>
+          <p className="text-sm text-text-muted mt-0.5">{startedDate}</p>
         </div>
 
-        {/* Status badge — green dot for active, gray for ended */}
         <span
-          className={`text-xs px-2 py-1 rounded-full font-medium ${
+          className={`text-xs px-2.5 py-1 rounded-full font-medium ${
             isActive
-              ? "bg-green-50 text-green-700"
-              : "bg-slate-100 text-slate-500"
+              ? "bg-accent-soft text-accent"
+              : "bg-surface-raised text-text-faint"
           }`}
         >
           {isActive ? "Active" : "Completed"}

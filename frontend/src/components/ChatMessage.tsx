@@ -1,9 +1,4 @@
-// src/components/ChatMessage.tsx
-//
-// Renders ONE message bubble in the chat thread.
-// Student messages align right and are blue.
-// Agent messages align left and are styled differently per agent
-// so the student can visually tell who's "speaking".
+
 
 import type { Message } from "@/lib/types";
 
@@ -11,13 +6,14 @@ interface ChatMessageProps {
   message: Message;
 }
 
-// Maps each agent name (from backend/agents/*.py) to a label + color.
-// Centralising this mapping here means adding a new agent later is
-// a one-line change, not a hunt through JSX.
-const AGENT_STYLES: Record<string, { label: string; badgeColor: string }> = {
-  tutor_agent: { label: "Tutor", badgeColor: "bg-indigo-100 text-indigo-700" },
-  quiz_agent: { label: "Quiz", badgeColor: "bg-amber-100 text-amber-700" },
-  feedback_agent: { label: "Coach", badgeColor: "bg-emerald-100 text-emerald-700" },
+// Each agent gets a distinct accent from our token system:
+//   Tutor    -> mint/teal (the primary accent — calm, instructive)
+//   Quiz     -> warm amber (energy, scoring, challenge)
+//   Feedback -> soft violet (a third distinct voice — reflective coach)
+const AGENT_STYLES: Record<string, { label: string; textColor: string; bgColor: string }> = {
+  tutor_agent: { label: "Tutor", textColor: "text-accent", bgColor: "bg-accent-soft" },
+  quiz_agent: { label: "Quiz", textColor: "text-warm", bgColor: "bg-warm-soft" },
+  feedback_agent: { label: "Coach", textColor: "text-violet", bgColor: "bg-violet-soft" },
 };
 
 export default function ChatMessage({ message }: ChatMessageProps) {
@@ -27,24 +23,21 @@ export default function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
       <div className={`max-w-[75%] ${isUser ? "items-end" : "items-start"} flex flex-col`}>
-        {/* Agent badge — only shown on agent messages, not user messages */}
         {!isUser && agentStyle && (
           <span
-            className={`text-xs font-medium px-2 py-0.5 rounded-full mb-1 ${agentStyle.badgeColor}`}
+            className={`text-xs font-medium px-2 py-0.5 rounded-full mb-1.5 ${agentStyle.bgColor} ${agentStyle.textColor}`}
           >
             {agentStyle.label}
           </span>
         )}
 
         <div
-          className={`rounded-2xl px-4 py-2.5 whitespace-pre-wrap ${
+          className={`rounded-2xl px-4 py-2.5 whitespace-pre-wrap leading-relaxed ${
             isUser
-              ? "bg-blue-600 text-white rounded-br-sm"
-              : "bg-white border border-slate-200 text-slate-800 rounded-bl-sm"
+              ? "bg-accent text-accent-text rounded-br-sm"
+              : "bg-surface border border-border text-text rounded-bl-sm"
           }`}
         >
-          {/* whitespace-pre-wrap above preserves newlines from the LLM's
-              markdown-ish output without needing a full markdown renderer yet */}
           {message.content}
         </div>
       </div>

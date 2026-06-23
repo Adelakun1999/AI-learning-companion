@@ -1,9 +1,4 @@
-// src/components/ChatInput.tsx
-//
-// The text box at the bottom of the chat. Includes a small selector
-// so the student can optionally force a specific agent (matches
-// backend's message_type: "auto" | "tutor" | "quiz" | "feedback" —
-// see backend/schemas/session.py ChatRequest).
+
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import type { MessageType } from "@/lib/types";
@@ -26,14 +21,12 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
     setIsSending(true);
     try {
       await onSend(trimmed, messageType);
-      setText(""); // clear input only after a successful send
+      setText("");
     } finally {
       setIsSending(false);
     }
   }
 
-  // Pressing Enter submits, but Shift+Enter adds a newline —
-  // standard chat-app convention (Slack, ChatGPT, etc. all do this).
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -42,9 +35,8 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="border-t border-slate-200 bg-white p-4">
-      {/* Quick-action buttons for explicit routing */}
-      <div className="flex gap-2 mb-2">
+    <form onSubmit={handleSubmit} className="border-t border-border bg-base p-4">
+      <div className="flex gap-2 mb-2.5">
         {(["auto", "tutor", "quiz", "feedback"] as MessageType[]).map((type) => (
           <button
             key={type}
@@ -52,8 +44,8 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
             onClick={() => setMessageType(type)}
             className={`text-xs px-3 py-1 rounded-full border transition-colors ${
               messageType === type
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                ? "bg-accent text-accent-text border-accent"
+                : "bg-surface text-text-muted border-border hover:border-border-hover"
             }`}
           >
             {type === "auto" ? "Auto" : type.charAt(0).toUpperCase() + type.slice(1)}
@@ -69,12 +61,12 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
           disabled={disabled || isSending}
           placeholder="Ask a question, say 'quiz me', or 'how am I doing?'..."
           rows={1}
-          className="flex-1 resize-none px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
+          className="flex-1 resize-none px-4 py-2.5 bg-surface border border-border rounded-lg text-text placeholder:text-text-faint focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent disabled:opacity-50 transition-colors"
         />
         <button
           type="submit"
           disabled={disabled || isSending || !text.trim()}
-          className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+          className="bg-accent text-accent-text font-medium px-5 py-2.5 rounded-lg hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {isSending ? "..." : "Send"}
         </button>
